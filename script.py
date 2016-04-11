@@ -40,8 +40,9 @@ limit = (limit, )
 def getFeatureVector(uid):
     con2 = sqlite3.connect('twitter.db')
     d = con2.cursor()
-    d.execute('select group_concat(text) from tweet, user where tweet.user = user.id and user.id = ?;', uid) #get all tweet text from a user
-    return d.fetchone()[0]
+    d.execute('select group_concat(text), group_concat(source) from tweet, user where tweet.user = user.id and user.id = ?;', uid) #get all tweet text from a user
+    ret = d.fetchone()
+    return ret[0] + ret[1]
 
 # Print bot / user totals
 c.execute('select count(*) from tweet, user where user.is_bot = 1 and tweet.user = user.id;')
@@ -81,20 +82,15 @@ print("Done")
 # Calculate and print cv scores
 scores = cross_validation.cross_val_score(clf, x_data_train, y_data_labels, cv=cv, scoring='f1_weighted')
 print("scores: " + str(np.average(scores)))
-print(clf.predict([getFeatureVector((22933636,))]))
 
-# Feature importance
+# Feature importance table
+feature_names = vect.get_feature_names()
+selected_feature_names = [feature_names[i] for i in sel.get_support(True)]
 importances = rfc.feature_importances_
 indices = np.argsort(importances)[::-1]
-feature_names = vect.get_feature_names()
-table = []
+table = [[selected_feature_names[f], importances[f]] for f in indices]
 
-# From what I understand feature_names[indices[f]] should be the feature name that corresponds to the feature index in indices[f]
-
-for f in range(len(importances)):
-    table.append([feature_names[indices[f]], importances[indices[f]]])
-
-# Pretty-print a table.
+# Pretty-print the table.
 df = pd.DataFrame(table)
 print(df.to_string(header=False))
 
